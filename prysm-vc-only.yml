@@ -51,8 +51,6 @@ services:
       - /var/lib/prysm/
       - --keymanager-token-file
       - /var/lib/prysm/auth-token
-      - --beacon-rpc-provider
-      - ${CL_NODE:-http://consensus:4000}
       - --verbosity
       - ${LOG_LEVEL}
       - --accept-terms-of-use
@@ -66,8 +64,9 @@ services:
       - --grpc-gateway-port
       - ${KEY_API_PORT:-7500}
       - --grpc-gateway-corsdomain=*
-      - --beacon-rpc-gateway-provider
-      - consensus:5052
+      - --enable-beacon-rest-api
+      - --beacon-rest-api-provider
+      - ${CL_NODE:-http://consensus:5052}
       - --suggested-fee-recipient
       - ${FEE_RECIPIENT}
       - --wallet-password-file
