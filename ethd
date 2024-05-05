@@ -1217,17 +1217,7 @@ update() {
       if [[ "${__branch}" =~ ^tag-v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         git checkout main
       fi
-# This preps for a removal of ext-network.yml in a future update, after Pectra
-      ${__as_owner} cp ext-network.yml ext-network.yml.bak
-      if git ls-files -v | grep -q "^h" | grep -q "ext-network.yml$"; then
-        ${__as_owner} git update-index --no-assume-unchanged ext-network.yml
-      fi
-      ${__as_owner} git restore ext-network.yml
       ${__as_owner} git pull origin main
-      ${__as_owner} cp ext-network.yml.bak ext-network.yml
-      if git ls-files -v | grep -q "ext-network.yml$"; then
-        ${__as_owner} git update-index --assume-unchanged ext-network.yml
-      fi
     else
       export ETHDPINNED="${value}"
       ${__as_owner} git fetch --tags
@@ -2894,8 +2884,6 @@ check_legacy() {
 }
 
 config() {
-  # Do not track changes to ext-network.yml
-  ${__as_owner} git update-index --assume-unchanged ext-network.yml
   # Create ENV file if needed
   if ! [[ -f "${ENV_FILE}" ]]; then
     ${__as_owner} cp default.env "${ENV_FILE}"
