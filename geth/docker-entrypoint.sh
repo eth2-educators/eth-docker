@@ -2,28 +2,28 @@
 set -euo pipefail
 
 if [ "$(id -u)" = '0' ]; then
-  chown -R geth:geth /var/lib/goethereum
+  chown -R geth:geth /var/lib/geth
   exec su-exec geth docker-entrypoint.sh "$@"
 fi
 
 if [ -n "${JWT_SECRET}" ]; then
-  echo -n "${JWT_SECRET}" > /var/lib/goethereum/ee-secret/jwtsecret
+  echo -n "${JWT_SECRET}" > /var/lib/geth/ee-secret/jwtsecret
   echo "JWT secret was supplied in .env"
 fi
 
-if [[ ! -f /var/lib/goethereum/ee-secret/jwtsecret ]]; then
+if [[ ! -f /var/lib/geth/ee-secret/jwtsecret ]]; then
   echo "Generating JWT secret"
   __secret1=$(head -c 8 /dev/urandom | od -A n -t u8 | tr -d '[:space:]' | sha256sum | head -c 32)
   __secret2=$(head -c 8 /dev/urandom | od -A n -t u8 | tr -d '[:space:]' | sha256sum | head -c 32)
-  echo -n "${__secret1}""${__secret2}" > /var/lib/goethereum/ee-secret/jwtsecret
+  echo -n "${__secret1}""${__secret2}" > /var/lib/geth/ee-secret/jwtsecret
 fi
 
-if [[ -O "/var/lib/goethereum/ee-secret" ]]; then
+if [[ -O "/var/lib/geth/ee-secret" ]]; then
   # In case someone specifies JWT_SECRET but it's not a distributed setup
-  chmod 777 /var/lib/goethereum/ee-secret
+  chmod 777 /var/lib/geth/ee-secret
 fi
-if [[ -O "/var/lib/goethereum/ee-secret/jwtsecret" ]]; then
-  chmod 666 /var/lib/goethereum/ee-secret/jwtsecret
+if [[ -O "/var/lib/geth/ee-secret/jwtsecret" ]]; then
+  chmod 666 /var/lib/geth/ee-secret/jwtsecret
 fi
 
 __ancient=""
@@ -41,24 +41,31 @@ if [[ "${NETWORK}" =~ ^https?:// ]]; then
   echo "This appears to be the ${repo} repo, branch ${branch} and config directory ${config_dir}."
   # For want of something more amazing, let's just fail if git fails to pull this
   set -e
-  if [ ! -d "/var/lib/goethereum/testnet/${config_dir}" ]; then
-    mkdir -p /var/lib/goethereum/testnet
-    cd /var/lib/goethereum/testnet
+  if [ ! -d "/var/lib/geth/testnet/${config_dir}" ]; then
+    mkdir -p /var/lib/geth/testnet
+    cd /var/lib/geth/testnet
     git init --initial-branch="${branch}"
     git remote add origin "${repo}"
     git config core.sparseCheckout true
     echo "${config_dir}" > .git/info/sparse-checkout
     git pull origin "${branch}"
   fi
-  bootnodes="$(paste -s -d, "/var/lib/goethereum/testnet/${config_dir}/bootnode.txt")"
-  networkid="$(jq -r '.config.chainId' "/var/lib/goethereum/testnet/${config_dir}/genesis.json")"
+  bootnodes="$(paste -s -d, "/var/lib/geth/testnet/${config_dir}/bootnode.txt")"
+  networkid="$(jq -r '.config.chainId' "/var/lib/geth/testnet/${config_dir}/genesis.json")"
   set +e
   __network="--bootnodes=${bootnodes} --networkid=${networkid} --http.api=eth,net,web3,debug,admin,txpool"
-  if [ ! -d "/var/lib/goethereum/geth/chaindata/" ]; then
-    geth init --state.scheme path --datadir /var/lib/goethereum "/var/lib/goethereum/testnet/${config_dir}/genesis.json"
+  if [ ! -d "/var/lib/geth/geth/chaindata/" ]; then
+    geth init --datadir /var/lib/geth "/var/lib/geth/testnet/${config_dir}/genesis.json"
   fi
 else
   __network="--${NETWORK}"
+fi
+
+# New or old datadir
+if [ -d /var/lib/goethereum/geth/chaindata ]; then
+  __datadir="--datadir /var/lib/goethereum"
+else
+  __datadir="--datadir /var/lib/geth"
 fi
 
 # Set verbosity
@@ -92,13 +99,6 @@ else
   __prune=""
 fi
 
-if [ "${IPV6}" = "true" ]; then
-  echo "Configuring Geth for discv5 for IPv6 advertisements"
-  __ipv6="--discv5"
-else
-  __ipv6=""
-fi
-
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-exec "$@" ${__ancient} ${__ipv6} ${__network} ${__prune} ${__verbosity} ${EL_EXTRAS}
+exec "$@" ${__datadir} ${__ancient} ${__network} ${__prune} ${__verbosity} ${EL_EXTRAS}

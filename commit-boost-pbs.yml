@@ -1,0 +1,22 @@
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 100m
+      max-file: "3"
+      tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
+
+services:
+  cb-pbs:
+    image: ${CB_PBS_DOCKER_REPO:-ghcr.io/commit-boost/pbs}:${CB_PBS_DOCKER_TAG:-latest}
+    environment:
+      CB_CONFIG: /cb-config.toml
+      CB_METRICS_PORT: 10000
+    volumes:
+    - ./commit-boost/cb-config.toml:/cb-config.toml:ro
+    labels:
+      - metrics.scrape=true
+      - metrics.path=/metrics
+      - metrics.port=10000
+      - metrics.instance=cb-pbs
+      - metrics.network=${NETWORK}

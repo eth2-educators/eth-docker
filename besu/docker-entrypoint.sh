@@ -48,14 +48,14 @@ if [[ "${NETWORK}" =~ ^https?:// ]]; then
   __network="--genesis-file=/var/lib/besu/testnet/${config_dir}/besu.json --bootnodes=${bootnodes} \
 --Xfilter-on-enr-fork-id=true --rpc-http-api=ADMIN,CLIQUE,MINER,ETH,NET,DEBUG,TXPOOL,ENGINE,TRACE,WEB3"
 else
-  __network="--network ${NETWORK} --rpc-http-api WEB3,ETH,NET"
+  __network="--network ${NETWORK}"
 fi
 
 if [ "${ARCHIVE_NODE}" = "true" ]; then
   echo "Besu archive node without pruning"
   __prune="--data-storage-format=FOREST --sync-mode=FULL"
 else
-  __prune="--data-storage-format=BONSAI --sync-mode=SNAP"
+  __prune=""
 fi
 
 __memtotal=$(awk '/MemTotal/ {printf "%d", int($2/1024/1024)}' /proc/meminfo)
@@ -63,6 +63,21 @@ if [ "${__memtotal}" -ge 60 ]; then
   __spec="--Xplugin-rocksdb-high-spec-enabled=true"
 else
   __spec=""
+fi
+
+# New or old datadir
+if [ -d /var/lib/besu-og/database ]; then
+  __datadir="--data-path /var/lib/besu-og"
+else
+  __datadir="--data-path /var/lib/besu"
+fi
+
+# DiscV5 for IPV6
+if [ "${IPV6:-false}" = "true" ]; then
+  echo "Configuring Besu for discv5 for IPv6 advertisements"
+  __ipv6="--Xv5-discovery-enabled"
+else
+  __ipv6=""
 fi
 
 if [ -f /var/lib/besu/prune-marker ]; then
@@ -73,9 +88,9 @@ if [ -f /var/lib/besu/prune-marker ]; then
   fi
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" ${__network} ${__prune} ${EL_EXTRAS} storage trie-log prune
+  exec "$@" ${__datadir} ${__network} ${__prune} ${EL_EXTRAS} storage trie-log prune
 else
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" ${__network} ${__prune} ${__spec} ${EL_EXTRAS}
+  exec "$@" ${__datadir} ${__network} ${__ipv6} ${__prune} ${__spec} ${EL_EXTRAS}
 fi

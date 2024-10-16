@@ -1,0 +1,4 @@
+services:
+  execution:
+    ports:
+      - ${SHARE_IP:-}:${CL_REST_PORT:-5052}:${CL_REST_PORT:-5052}/tcp

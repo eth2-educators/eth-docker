@@ -9,7 +9,7 @@ x-logging: &logging
 services:
   ssv-node:
     restart: "unless-stopped"
-    image: bloxstaking/ssv-node:${SSV_NODE_TAG:-latest}
+    image: ${SSV_NODE_REPO:-ssvlabs/ssv-node}:${SSV_NODE_TAG:-latest}
     user: 12000:12000
     volumes:
       - ./ssv-config:/config

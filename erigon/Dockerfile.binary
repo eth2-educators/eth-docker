@@ -1,5 +1,5 @@
-ARG DOCKER_TAG=stable
-ARG DOCKER_REPO=thorax/erigon
+ARG DOCKER_TAG=latest
+ARG DOCKER_REPO=erigontech/erigon
 
 FROM ${DOCKER_REPO}:${DOCKER_TAG}
 

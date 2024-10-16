@@ -10,7 +10,7 @@ x-logging: &logging
 services:
   ethereum-metrics-exporter:
     restart: "unless-stopped"
-    image: samcm/ethereum-metrics-exporter:0.23.0-debian
+    image: samcm/ethereum-metrics-exporter:0.24.0-debian
     entrypoint:
       - /ethereum-metrics-exporter
       - --consensus-url=${CL_NODE}

@@ -18,7 +18,7 @@ services:
 
   ssv-dkg:
     restart: "unless-stopped"
-    image: bloxstaking/ssv-dkg:${SSV_DKG_TAG:-latest}
+    image: ${SSV_DKG_REPO:-ssvlabs/ssv-dkg}:${SSV_DKG_TAG:-latest}
     volumes:
       - ./ssv-config:/config
       - ssv-dkg-tls:/ssl

@@ -1,5 +1,5 @@
 # Build Prysm in a stock Go build container
-FROM golang:1.22-bookworm AS builder
+FROM golang:1.23-bookworm AS builder
 
 # Here only to avoid build-time errors
 ARG DOCKER_TAG

@@ -8,6 +8,7 @@ set -Eeuo pipefail
 ARGS=()
 foundu=0
 foundf=0
+foundnonint=0
 uid=1000
 folder="validator_keys"
 for var in "$@"; do
@@ -17,6 +18,10 @@ for var in "$@"; do
   fi
   if [ "$var" = '--folder' ]; then
     foundf=1
+    continue
+  fi
+  if [ "$var" = '--non_interactive' ]; then
+    foundnonint=1
     continue
   fi
   if [ "$foundu" = '1' ]; then
@@ -34,6 +39,16 @@ for var in "$@"; do
     continue
   fi
   ARGS+=("$var")
+done
+
+for i in "${!ARGS[@]}"; do
+  if [ "${ARGS[$i]}" = '/app/staking_deposit/deposit.py' ]; then
+    if [ "$foundnonint" = '1' ]; then
+      # the flag should be before the command
+      ARGS=("${ARGS[@]:0:$i+1}" "--non_interactive" "${ARGS[@]:$i+1}")
+    fi
+    break
+  fi
 done
 
 su-exec depcli "${ARGS[@]}"

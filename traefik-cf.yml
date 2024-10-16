@@ -53,7 +53,7 @@ services:
     restart: "unless-stopped"
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      - 'CONFIG={"settings": [{"provider": "cloudflare", "zone_identifier": "${CF_ZONE_ID}", "domain": "${DOMAIN}", "host": "${DDNS_SUBDOMAIN}", "ttl": 1, "token": "${CF_DNS_API_TOKEN}", "proxied": ${DDNS_PROXY}, "ip_version": "ipv4"}]}'
+      - 'CONFIG={"settings": [{"provider": "cloudflare", "zone_identifier": "${CF_ZONE_ID}", "domain": "${DDNS_SUBDOMAIN}.${DOMAIN}", "ttl": 1, "token": "${CF_DNS_API_TOKEN}", "proxied": ${DDNS_PROXY}, "ip_version": "ipv4"}]}'
     volumes:
       - /etc/localtime:/etc/localtime:ro
     <<: *logging
@@ -69,3 +69,7 @@ services:
 
 volumes:
   certs:
+
+networks:
+  default:
+    enable_ipv6: ${IPV6:-false}

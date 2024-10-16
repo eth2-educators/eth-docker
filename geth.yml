@@ -31,9 +31,10 @@ services:
       - ANCIENT_DIR=${ANCIENT_DIR:-}
     volumes:
       - geth-eth1-data:/var/lib/goethereum
+      - geth-el-data:/var/lib/geth
       - ${ANCIENT_DIR:-.nada}:/var/lib/ancient
       - /etc/localtime:/etc/localtime:ro
-      - jwtsecret:/var/lib/goethereum/ee-secret
+      - jwtsecret:/var/lib/geth/ee-secret
     ports:
       - ${HOST_IP:-}:${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/tcp
       - ${HOST_IP:-}:${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/udp
@@ -51,8 +52,6 @@ services:
       - 0.0.0.0
       - --http.vhosts=*
       - --http.corsdomain=*
-      - --datadir
-      - /var/lib/goethereum
       - --port
       - ${EL_P2P_PORT:-30303}
       - --http.port
@@ -68,7 +67,7 @@ services:
       - --pprof.addr
       - 0.0.0.0
       - --authrpc.jwtsecret
-      - /var/lib/goethereum/ee-secret/jwtsecret
+      - /var/lib/geth/ee-secret/jwtsecret
       - --authrpc.addr
       - 0.0.0.0
       - --authrpc.port
@@ -84,6 +83,7 @@ services:
       - metrics.network=${NETWORK}
 
 volumes:
+  geth-el-data:
   geth-eth1-data:
   jwtsecret:
 

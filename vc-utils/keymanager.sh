@@ -485,6 +485,40 @@ validator-list() {
     fi
 }
 
+validator-count() {
+    __api_path=eth/v1/keystores
+    if [ "${WEB3SIGNER}" = "true" ]; then
+        __token=NIL
+        __vc_api_container=${__api_container}
+        __api_container=web3signer
+        __vc_api_port=${__api_port}
+        __api_port=9000
+        __vc_api_tls=${__api_tls}
+        __api_tls=false
+    else
+        get-token
+    fi
+    __validator-list-call
+    key_count=$(echo "$__result" | jq -r '.data | length')
+    echo "Validator keys loaded into ${__service}: $key_count"
+
+    if [ "${WEB3SIGNER}" = "true" ]; then
+        get-token
+        __api_path=eth/v1/remotekeys
+        __api_container=${__vc_api_container}
+        __service=${__vc_service}
+        __api_port=${__vc_api_port}
+        __api_tls=${__vc_api_tls}
+        __validator-list-call
+    remote_key_count=$(echo "$__result" | jq -r '.data | length')
+        echo "Remote Validator keys registered with ${__service}: $remote_key_count"
+        if [ "${key_count}" -ne "${remote_key_count}" ]; then
+          echo "WARNING: The number of keys loaded into Web3signer and registered with the validator client differ."
+          echo "Please run \"./ethd keys register\""
+        fi
+    fi
+}
+
 validator-delete() {
     if [ -z "${__pubkey}" ]; then
       echo "Please specify a validator public key to delete, or \"all\""
@@ -764,6 +798,14 @@ and secrets directories into .eth/validator_keys instead."
         fi
         if [ "$__eth2_val_tools" -eq 0 ] && [ "$__justone" -eq 0 ]; then
             while true; do
+                __passfile=${__keyfile/.json/.txt}
+                if [ -f "$__passfile" ]; then
+                    echo "Password file is found: $__passfile"
+                    __password=$(< "$__passfile")
+                    break
+                else
+                    echo "Password file $__passfile not found."
+                fi
                 read -srp "Please enter the password for your validator key stored in $__keyfile with public key $__pubkey: " __password
                 echo
                 read -srp "Please re-enter the password: " __password2
@@ -886,11 +928,7 @@ and secrets directories into .eth/validator_keys instead."
             __api_port=${__vc_api_port}
             __api_tls=${__vc_api_tls}
 
-            if [ -z "${PRYSM:+x}" ]; then
-                jq --arg pubkey_value "$__pubkey" --arg url_value "http://web3signer:9000" '. | .remote_keys += [{"pubkey": $pubkey_value, "url": $url_value}]' <<< '{}' >/tmp/apidata.txt
-            else
-                jq --arg pubkey_value "$__pubkey" --arg url_value "http://web3signer:9000" '. | .remote_keys += [{"pubkey": $pubkey_value}]' <<< '{}' >/tmp/apidata.txt
-            fi
+            jq --arg pubkey_value "$__pubkey" --arg url_value "http://web3signer:9000" '. | .remote_keys += [{"pubkey": $pubkey_value, "url": $url_value}]' <<< '{}' >/tmp/apidata.txt
 
             get-token
             __api_data=@/tmp/apidata.txt
@@ -991,11 +1029,7 @@ validator-register() {
 
     __w3s_pubkeys="$(echo "$__result" | jq -r '.data[].validating_pubkey')"
     while IFS= read -r __pubkey; do
-        if [ -z "${PRYSM:+x}" ]; then
-            jq --arg pubkey_value "$__pubkey" --arg url_value "http://web3signer:9000" '. | .remote_keys += [{"pubkey": $pubkey_value, "url": $url_value}]' <<< '{}' >/tmp/apidata.txt
-        else
-            jq --arg pubkey_value "$__pubkey" --arg url_value "http://web3signer:9000" '. | .remote_keys += [{"pubkey": $pubkey_value}]' <<< '{}' >/tmp/apidata.txt
-        fi
+         jq --arg pubkey_value "$__pubkey" --arg url_value "http://web3signer:9000" '. | .remote_keys += [{"pubkey": $pubkey_value, "url": $url_value}]' <<< '{}' >/tmp/apidata.txt
 
         __api_data=@/tmp/apidata.txt
         __api_path=eth/v1/remotekeys
@@ -1064,6 +1098,8 @@ usage() {
     echo "Call keymanager with an ACTION, one of:"
     echo "  list"
     echo "     Lists the public keys of all validators currently loaded into your validator client"
+    echo "  count"
+    echo "     Counts the number of keys currently loaded into your validator client"
     echo "  import"
     echo "      Import all keystore*.json in .eth/validator_keys while loading slashing protection data"
     echo "      in slashing_protection*.json files that match the public key(s) of the imported validator(s)"
@@ -1213,6 +1249,9 @@ case "$3" in
         ;;
     register)
         validator-register
+        ;;
+    count)
+        validator-count
         ;;
     get-recipient)
         __pubkey=$4

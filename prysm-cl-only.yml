@@ -56,9 +56,9 @@ services:
       - /var/lib/prysm/
       - --rpc-host
       - 0.0.0.0
-      - --grpc-gateway-host
+      - --http-host
       - 0.0.0.0
-      - --grpc-gateway-port
+      - --http-port
       - ${CL_REST_PORT:-5052}
       # Allow larger messages so credential change messages can be sent
       - --rpc-max-page-size
@@ -87,7 +87,6 @@ services:
       - "8008"
       - --suggested-fee-recipient
       - ${FEE_RECIPIENT}
-      - --enable-debug-rpc-endpoints
     labels:
       - metrics.scrape=true
       - metrics.path=/metrics

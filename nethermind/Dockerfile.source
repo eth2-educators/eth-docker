@@ -49,6 +49,8 @@ WORKDIR /nethermind
 COPY --from=builder --chown=${USER}:${USER} /nethermind/out .
 
 RUN chown -R ${USER}:${USER} /nethermind
+RUN mkdir -p /var/lib/nethermind-og && chown -R ${USER}:${USER} /var/lib/nethermind-og \
+&& chmod -R 700 /var/lib/nethermind-og
 RUN mkdir -p /var/lib/nethermind/ee-secret && chown -R ${USER}:${USER} /var/lib/nethermind \
 && chmod -R 700 /var/lib/nethermind && chmod 777 /var/lib/nethermind/ee-secret
 

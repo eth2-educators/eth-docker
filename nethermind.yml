@@ -29,7 +29,8 @@ services:
       - AUTOPRUNE_NM=${AUTOPRUNE_NM:-true}
       - NETWORK=${NETWORK}
     volumes:
-      - nm-eth1-data:/var/lib/nethermind
+      - nethermind-el-data:/var/lib/nethermind
+      - nm-eth1-data:/var/lib/nethermind-og
       - /etc/localtime:/etc/localtime:ro
       - jwtsecret:/var/lib/nethermind/ee-secret
     ports:
@@ -44,8 +45,6 @@ services:
     entrypoint:
       - docker-entrypoint.sh
       - /nethermind/nethermind
-      - --datadir
-      - /var/lib/nethermind
       - --Init.WebSocketsEnabled
       - "true"
       - --Network.DiscoveryPort
@@ -92,6 +91,7 @@ services:
       - metrics.network=${NETWORK}
 
 volumes:
+  nethermind-el-data:
   nm-eth1-data:
   jwtsecret:
 

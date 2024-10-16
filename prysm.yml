@@ -57,11 +57,11 @@ services:
       - /var/lib/prysm/
       - --rpc-host
       - 0.0.0.0
-      - --grpc-gateway-host
+      - --http-host
       - 0.0.0.0
-      - --grpc-gateway-port
+      - --http-port
       - ${CL_REST_PORT:-5052}
-      - --grpc-gateway-corsdomain=*
+      - --http-cors-domain=*
       # Allow larger messages so credential change messages can be sent
       - --rpc-max-page-size
       - "200000"
@@ -89,7 +89,6 @@ services:
       - "8008"
       - --suggested-fee-recipient
       - ${FEE_RECIPIENT}
-      - --enable-debug-rpc-endpoints
     labels:
       - metrics.scrape=true
       - metrics.path=/metrics
@@ -116,6 +115,7 @@ services:
       - DEFAULT_GRAFFITI=${DEFAULT_GRAFFITI:-false}
       - WEB3SIGNER=${WEB3SIGNER:-false}
       - NETWORK=${NETWORK}
+      - ENABLE_DIST_ATTESTATION_AGGR=${ENABLE_DIST_ATTESTATION_AGGR:-false}
     networks:
       default:
         aliases:
@@ -138,14 +138,14 @@ services:
       - --monitoring-port
       - "8009"
       - --web
-      - --grpc-gateway-host
+      - --http-host
       - 0.0.0.0
-      - --grpc-gateway-port
+      - --http-port
       - ${KEY_API_PORT:-7500}
-      - --grpc-gateway-corsdomain=*
+      - --http-cors-domain=*
       - --enable-beacon-rest-api
       - --beacon-rest-api-provider
-      - ${CL_NODE:-http://consensus:5052}
+      - http://consensus:${CL_REST_PORT:-5052}
       - --suggested-fee-recipient
       - ${FEE_RECIPIENT}
       - --wallet-password-file
@@ -193,7 +193,9 @@ services:
       - validator
       - exit
       - --wallet-dir=/var/lib/prysm/
-      - --beacon-rpc-provider=consensus:4000
+      - --enable-beacon-rest-api
+      - --beacon-rest-api-provider
+      - http://consensus:${CL_REST_PORT:-5052}
       - --wallet-password-file=/var/lib/prysm/password.txt
       - --${NETWORK}
     depends_on:

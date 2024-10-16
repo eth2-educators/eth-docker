@@ -46,10 +46,12 @@ services:
       - EMBEDDED_VC=false
       - NETWORK=${NETWORK}
       - IPV6=${IPV6:-false}
-      - CL_P2P_PORT=${CL_P2P_PORT:-9000}
+      - CL_IPV6_P2P_PORT=${CL_IPV6_P2P_PORT:-9090}
     ports:
       - ${HOST_IP:-}:${CL_P2P_PORT:-9000}:${CL_P2P_PORT:-9000}/tcp
       - ${HOST_IP:-}:${CL_P2P_PORT:-9000}:${CL_P2P_PORT:-9000}/udp
+      - ${HOST_IP:-}:${CL_IPV6_P2P_PORT:-9090}:${CL_IPV6_P2P_PORT:-9090}/tcp
+      - ${HOST_IP:-}:${CL_IPV6_P2P_PORT:-9090}:${CL_IPV6_P2P_PORT:-9090}/udp
     networks:
       default:
         aliases:
@@ -105,6 +107,7 @@ services:
       - DEFAULT_GRAFFITI=${DEFAULT_GRAFFITI:-false}
       - WEB3SIGNER=${WEB3SIGNER:-false}
       - NETWORK=${NETWORK}
+      - ENABLE_DIST_ATTESTATION_AGGR=${ENABLE_DIST_ATTESTATION_AGGR:-false}
     networks:
       default:
         aliases:

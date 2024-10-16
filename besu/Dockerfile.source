@@ -1,5 +1,5 @@
 # Build Besu in a stock Ubuntu container
-FROM eclipse-temurin:21-jdk-jammy AS builder
+FROM eclipse-temurin:21-jdk-noble AS builder
 
 # This is here to avoid build-time complaints
 ARG DOCKER_TAG
@@ -14,7 +14,7 @@ WORKDIR /usr/src
 RUN bash -c "git clone --recurse-submodules -j8 ${SRC_REPO} besu && cd besu && git config advice.detachedHead false && git fetch --all --tags && if [[ ${BUILD_TARGET} =~ pr-.+ ]]; then git fetch origin pull/$(echo ${BUILD_TARGET} | cut -d '-' -f 2)/head:besu-pr; git checkout besu-pr; else git checkout ${BUILD_TARGET}; fi && ./gradlew installDist"
 
 # Pull all binaries into a second stage deploy Ubuntu container
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:21-jre-noble
 
 ARG USER=besu
 ARG UID=10001
@@ -28,6 +28,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
   libjemalloc-dev \
   git \
   wget \
+  adduser \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -46,6 +47,7 @@ RUN adduser \
     --ingroup "${USER}" \
     "${USER}"
 
+RUN mkdir -p /var/lib/besu-og && chown -R ${USER}:${USER} /var/lib/besu-og && chmod -R 700 /var/lib/besu-og
 RUN mkdir -p /var/lib/besu/ee-secret && chown -R besu:besu /var/lib/besu && chmod -R 700 /var/lib/besu && chmod 777 /var/lib/besu/ee-secret
 
 # Cannot assume buildkit, hence no chmod

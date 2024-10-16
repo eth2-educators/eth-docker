@@ -1,5 +1,5 @@
 # Build Geth in a stock Go build container
-FROM golang:1.22-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Unused, this is here to avoid build time complaints
 ARG DOCKER_TAG
@@ -38,7 +38,8 @@ RUN adduser \
     --ingroup "${USER}" \
     "${USER}"
 
-RUN mkdir -p /var/lib/goethereum/ee-secret && chown -R ${USER}:${USER} /var/lib/goethereum && chmod -R 700 /var/lib/goethereum && chmod 777 /var/lib/goethereum/ee-secret
+RUN mkdir -p /var/lib/goethereum && chown -R ${USER}:${USER} /var/lib/goethereum && chmod -R 700 /var/lib/goethereum
+RUN mkdir -p /var/lib/geth/ee-secret && chown -R ${USER}:${USER} /var/lib/geth && chmod -R 700 /var/lib/geth && chmod 777 /var/lib/geth/ee-secret
 
 # Cannot assume buildkit, hence no chmod
 COPY --from=builder --chown=${USER}:${USER} /src/go-ethereum/build/bin/geth /usr/local/bin/

@@ -27,7 +27,8 @@ RUN adduser \
     --ingroup "${USER}" \
     "${USER}"
 
-RUN mkdir -p /var/lib/goethereum/ee-secret && chown -R ${USER}:${USER} /var/lib/goethereum && chmod -R 700 /var/lib/goethereum && chmod 777 /var/lib/goethereum/ee-secret
+RUN mkdir -p /var/lib/goethereum && chown -R ${USER}:${USER} /var/lib/goethereum && chmod -R 700 /var/lib/goethereum
+RUN mkdir -p /var/lib/geth/ee-secret && chown -R ${USER}:${USER} /var/lib/geth && chmod -R 700 /var/lib/geth && chmod 777 /var/lib/geth/ee-secret
 
 # Cannot assume buildkit, hence no chmod
 COPY --chown=${USER}:${USER} ./docker-entrypoint.sh /usr/local/bin/

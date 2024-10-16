@@ -15,8 +15,8 @@ services:
       args:
         - BUILD_TARGET=${ERIGON_SRC_BUILD_TARGET:-'$(git describe --tags $(git rev-list --tags --max-count=1))'}
         - SRC_REPO=${ERIGON_SRC_REPO:-https://github.com/ledgerwatch/erigon}
-        - DOCKER_TAG=${ERIGON_DOCKER_TAG:-stable}
-        - DOCKER_REPO=${ERIGON_DOCKER_REPO:-thorax/erigon}
+        - DOCKER_TAG=${ERIGON_DOCKER_TAG:-latest}
+        - DOCKER_REPO=${ERIGON_DOCKER_REPO:-erigontech/erigon}
     stop_grace_period: 5m
     image: erigon:local
     pull_policy: never
@@ -27,7 +27,13 @@ services:
       - ARCHIVE_NODE=${ARCHIVE_NODE:-}
       - NETWORK=${NETWORK}
       - IPV6=${IPV6:-false}
-      - DOCKER_TAG=${ERIGON_DOCKER_TAG:-stable}
+      - DOCKER_TAG=${ERIGON_DOCKER_TAG:-latest}
+      - COMPOSE_FILE=${COMPOSE_FILE}
+      - CL_P2P_PORT=${CL_P2P_PORT:-9000}
+      - CL_REST_PORT=${CL_REST_PORT:-5052}
+      - RAPID_SYNC_URL=${RAPID_SYNC_URL:-}
+      - MEV_BOOST=${MEV_BOOST:-false}
+      - MEV_NODE=${MEV_NODE:-}
     volumes:
       - erigon-el-data:/var/lib/erigon
       - /etc/localtime:/etc/localtime:ro

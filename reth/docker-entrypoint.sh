@@ -74,17 +74,39 @@ case ${LOG_LEVEL} in
     ;;
 esac
 
+__static=""
+if [ -n "${STATIC_DIR}" ] && [ ! "${STATIC_DIR}" = ".nada" ]; then
+  echo "Using separate static files directory at ${STATIC_DIR}."
+  __static="--datadir.static-files /var/lib/static"
+fi
+
 if [ "${ARCHIVE_NODE}" = "true" ]; then
   echo "Reth archive node without pruning"
   __prune=""
 else
   __prune="--full"
-fi
+  if [ ! -f "/var/lib/reth/reth.toml" ]; then  # Configure ssv, rocketpool, stakewise contracts
+# Word splitting is desired for the command line parameters
+# shellcheck disable=SC2086
+    reth init ${__network} --datadir /var/lib/reth ${__static}
+    cat <<EOF >> /var/lib/reth/reth.toml
 
-__static=""
-if [ -n "${STATIC_DIR}" ] && [ ! "${STATIC_DIR}" = ".nada" ]; then
-  echo "Using separate static files directory at ${STATIC_DIR}."
-  __static="--datadir.static-files /var/lib/static"
+[prune]
+block_interval = 5
+
+[prune.segments]
+sender_recovery = "full"
+
+[prune.segments.receipts]
+before = 0
+
+[prune.segments.account_history]
+distance = 10064
+
+[prune.segments.storage_history]
+distance = 10064
+EOF
+  fi
 fi
 
 if [ -f /var/lib/reth/prune-marker ]; then

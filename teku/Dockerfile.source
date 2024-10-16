@@ -1,5 +1,5 @@
 # Build Teku in a stock Ubuntu container
-FROM eclipse-temurin:21-jdk-jammy AS builder
+FROM eclipse-temurin:21-jdk-noble AS builder
 
 # This is here to avoid build-time complaints
 ARG DOCKER_TAG
@@ -21,7 +21,7 @@ RUN bash -c "git clone ${SRC_REPO} teku \
   && ./gradlew installDist"
 
 # Pull all binaries into a second stage deploy Ubuntu container
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:21-jre-noble
 
 ARG USER=teku
 ARG UID=10002
@@ -30,6 +30,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
   ca-certificates \
   tzdata \
   git \
+  adduser \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 

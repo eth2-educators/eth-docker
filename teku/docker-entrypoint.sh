@@ -133,7 +133,25 @@ fi
 
 if [ "${IPV6}" = "true" ]; then
   echo "Configuring Teku to listen on IPv6 ports"
-  __ipv6="--p2p-interface 0.0.0.0,:: --p2p-port-ipv6 ${CL_P2P_PORT:-9000}"
+  __ipv6="--p2p-interface 0.0.0.0,:: --p2p-port-ipv6 ${CL_IPV6_P2P_PORT:-9090}"
+# ENR discovery on v6 is not yet working, likely too few peers. Manual for now
+  __ipv4_pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$"
+  __ipv6_pattern="^[0-9A-Fa-f]{1,4}:" # Sufficient to check the start
+  set +e
+  __public_v4=$(curl -s -4 ifconfig.me)
+  __public_v6=$(curl -s -6 ifconfig.me)
+  set -e
+  __valid_v4=0
+  if [[ "$__public_v4" =~ $__ipv4_pattern ]]; then
+    __valid_v4=1
+  fi
+  if [[ "$__public_v6" =~ $__ipv6_pattern ]]; then
+    if [ "${__valid_v4}" -eq 1 ]; then
+      __ipv6+=" --p2p-advertised-ips ${__public_v4},${__public_v6}"
+    else
+      __ipv6+=" --p2p-advertised-ip ${__public_v6}"
+    fi
+  fi
 else
   __ipv6=""
 fi

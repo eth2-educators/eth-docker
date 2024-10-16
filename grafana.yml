@@ -35,7 +35,7 @@ services:
 
   ethereum-metrics-exporter:
     restart: "unless-stopped"
-    image: samcm/ethereum-metrics-exporter:0.23.0-debian
+    image: samcm/ethereum-metrics-exporter:0.24.0-debian
     entrypoint:
       - /ethereum-metrics-exporter
       - --consensus-url=${CL_NODE}
@@ -60,10 +60,10 @@ services:
     pid: host
     restart: unless-stopped
     volumes:
-      - '/:/host:ro,rslave'
+      - /:/host:ro,rslave
       - /etc/hostname:/etc/nodename:ro
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
+      - /proc:/host/proc:ro,rslave
+      - /sys:/host/sys:ro,rslave
       - /etc/localtime:/etc/localtime:ro
     <<: *logging
     labels:
@@ -105,10 +105,10 @@ services:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /:/rootfs:ro
+      - /:/rootfs:ro,rslave
       - /var/run:/var/run
-      - /sys:/sys:ro
-      - /var/lib/docker:/var/lib/docker:ro
+      - /sys:/sys:ro,rslave
+      - /var/lib/docker:/var/lib/docker:ro,rslave
     command:
       - --docker_only
       - --housekeeping_interval=30s
@@ -127,7 +127,7 @@ services:
       - /etc/machine-id:/etc/machine-id:ro
       - ./promtail:/etc/promtail
       - promtail-data:/tmp
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro,rslave
     entrypoint: ./etc/promtail/entrypoint.sh
     command: ["/usr/bin/promtail"]
     environment:

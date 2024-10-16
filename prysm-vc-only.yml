@@ -37,6 +37,7 @@ services:
       - DEFAULT_GRAFFITI=${DEFAULT_GRAFFITI:-false}
       - WEB3SIGNER=${WEB3SIGNER:-false}
       - NETWORK=${NETWORK}
+      - ENABLE_DIST_ATTESTATION_AGGR=${ENABLE_DIST_ATTESTATION_AGGR:-false}
     networks:
       default:
         aliases:
@@ -59,14 +60,14 @@ services:
       - --monitoring-port
       - "8009"
       - --web
-      - --grpc-gateway-host
+      - --http-host
       - 0.0.0.0
-      - --grpc-gateway-port
+      - --http-port
       - ${KEY_API_PORT:-7500}
-      - --grpc-gateway-corsdomain=*
       - --enable-beacon-rest-api
       - --beacon-rest-api-provider
       - ${CL_NODE:-http://consensus:5052}
+      - --http-cors-domain=*
       - --suggested-fee-recipient
       - ${FEE_RECIPIENT}
       - --wallet-password-file
@@ -112,7 +113,9 @@ services:
       - validator
       - exit
       - --wallet-dir=/var/lib/prysm/
-      - --beacon-rpc-provider=${CL_NODE:-http://consensus:4000}
+      - --enable-beacon-rest-api
+      - --beacon-rest-api-provider
+      - ${CL_NODE:-http://consensus:5052}
       - --wallet-password-file=/var/lib/prysm/password.txt
       - --${NETWORK}
 

@@ -27,8 +27,10 @@ services:
       - EL_EXTRAS=${EL_EXTRAS:-}
       - ARCHIVE_NODE=${ARCHIVE_NODE:-}
       - NETWORK=${NETWORK}
+      - IPV6=${IPV6:-false}
     volumes:
-      - besu-eth1-data:/var/lib/besu
+      - besu-el-data:/var/lib/besu
+      - besu-eth1-data:/var/lib/besu-og
       - /etc/localtime:/etc/localtime:ro
       - jwtsecret:/var/lib/besu/ee-secret
     ports:
@@ -43,8 +45,6 @@ services:
     entrypoint:
       - docker-entrypoint.sh
       - /opt/besu/bin/besu
-      - --data-path
-      - /var/lib/besu
       - --p2p-port
       - ${EL_P2P_PORT:-30303}
       - --rpc-http-enabled
@@ -92,6 +92,7 @@ services:
     command: /bin/sh
 
 volumes:
+  besu-el-data:
   besu-eth1-data:
   jwtsecret:
 

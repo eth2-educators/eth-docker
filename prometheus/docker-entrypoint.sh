@@ -40,6 +40,10 @@ select_clients() {
   esac
 
   case "$CLIENT" in
+    *lido-obol.yml* ) cp ./rootless/lido-obol-prom.yml ./rootless.d ;;
+  esac
+
+  case "$CLIENT" in
     *traefik-* ) cp ./rootless/traefik-prom.yml ./rootless.d ;;
   esac
 

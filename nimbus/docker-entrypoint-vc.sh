@@ -50,12 +50,19 @@ else
   __w3s_url=""
 fi
 
+# Distributed attestation aggregation
+if [ "${ENABLE_DIST_ATTESTATION_AGGR}" =  "true" ]; then
+  __att_aggr="--distributed"
+else
+  __att_aggr=""
+fi
+
 if [ "${DEFAULT_GRAFFITI}" = "true" ]; then
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" ${__w3s_url} ${__log_level} ${__doppel} ${__mev_boost} ${VC_EXTRAS}
+  exec "$@" ${__w3s_url} ${__log_level} ${__doppel} ${__mev_boost} ${__att_aggr} ${VC_EXTRAS}
 else
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" ${__w3s_url} "--graffiti=${GRAFFITI}" ${__log_level} ${__doppel} ${__mev_boost} ${VC_EXTRAS}
+  exec "$@" ${__w3s_url} "--graffiti=${GRAFFITI}" ${__log_level} ${__doppel} ${__mev_boost} ${__att_aggr} ${VC_EXTRAS}
 fi
