@@ -233,10 +233,6 @@ __prep_conffiles() {
   if [ ! -f "./prometheus/custom-prom.yml" ]; then
     ${__as_owner} touch "./prometheus/custom-prom.yml"
   fi
-# Move ssv-config.yaml
-  if [ -f "./ssv-config.yaml" ]; then
-    ${__as_owner} mv ./ssv-config.yaml ssv-config/config.yaml
-  fi
 # Create config.yaml if it doesn't exist
   if [ ! -f "ssv-config/config.yaml" ]; then
     ${__as_owner} cp ssv-config/config-sample.yaml ssv-config/config.yaml
@@ -706,168 +702,6 @@ __migrate_compose_file() {
 }
 
 
-__ssv_switch() {
-  echo "Detected legacy SSV Node. Migrating config to new testnet."
-  echo
-  echo "Stopping SSV Node container"
-  __node=$(__dodocker ps --format '{{.Names}}' | grep 'ssv2-node')
-  __dodocker stop "${__node}" && __dodocker rm -f "${__node}"
-  __dodocker volume rm "$(__dodocker volume ls -q | grep -i "$(basename "$(realpath .)")"_ssv2-data)"
-  echo
-  echo "SSV Node stopped and database deleted."
-  echo
-  cp blox-ssv-config.yaml blox-ssv-config.yaml.bak
-  cp blox-ssv-config.yaml ssv-config/config.yaml
-  rm blox-ssv-config.yaml
-  echo "Backup copy blox-ssv-config.yaml.bak created"
-  echo "Making changes to ssv-config/config.yaml"
-  __var="NETWORK"
-  NETWORK=$(__get_value_from_env "${__var}" "${__env_file}")
-  sed -i'.original' 's/blox-ssv2.yml/ssv.yml/' "${__env_file}".source
-  if ! grep -q "LogFilePath:" ssv-config/config.yaml; then
-# macOS-isms: Newline for sed add
-    sed -i'.original' '/global:/a\
-  LogFilePath: /tmp/ssv/debug.log
-' ssv-config/config.yaml
-  fi
-  if ! grep -q "MetricsAPIPort:" ssv-config/config.yaml; then
-    sed -i'.original' '$a\
-MetricsAPIPort: 15000
-' ssv-config/config.yaml
-  fi
-  if ! grep -q "ssv:" ssv-config/config.yaml; then
-    sed -i'.original' '/^  Network:/d' ssv-config/config.yaml # Remove old eth2 Network line if present
-    sed -i'.original' '$a\
- ssv:
- ' ssv-config/config.yaml
-    if [ "${NETWORK}" = "holesky" ]; then
-      sed -i'.original' '$a\
-  Network: holesky
-' ssv-config/config.yaml
-    elif [ "${NETWORK}" = "mainnet" ]; then
-      sed -i'.original' '$a\
-  Network: mainnet
-' ssv-config/config.yaml
-    else
-      echo "${NETWORK} is not something that works with SSV."
-      echo "Please fix this manually before running $__me update again."
-      echo "Aborting."
-      exit 1
-    fi
-  fi
-  rm ssv-config/config.yaml.original
-}
-
-
-__delete_reth() {
-# Check for Reth
-  __var="COMPOSE_FILE"
-  __value=$(__get_value_from_env "${__var}" "${__env_file}")
-# I do mean to match literally
-# shellcheck disable=SC2076
-  if [[ ! "${__value}" =~ "reth.yml" ]]; then
-    return 0
-  fi
-
-# Check Reth version, only continue if not on alpha
-  __var="RETH_DOCKER_TAG"
-  __value=$(__get_value_from_env "${__var}" "${__env_file}")
-# I do mean to match literally
-# shellcheck disable=SC2076
-  if [[ "${__value}" =~ "alpha" ]]; then
-    return 0
-  fi
-
-  if [ -z "$(__dodocker volume ls -q -f "name=$(basename "$(realpath .)" | tr '[:upper:]' '[:lower:]')[_-]reth-el-data")" ]; then # No Reth volume
-    return 0
-  fi
-
-# Has db been initialized?
-  __db_exists=$(__dodocker run --rm -v "$(__dodocker volume ls -q -f "name=$(basename "$(realpath .)" | tr '[:upper:]' '[:lower:]')[_-]reth-el-data")":"/var/lib/reth" \
-      alpine:3 sh -c 'if [ -f "/var/lib/reth/db/database.version" ]; then echo true; else echo false; fi')
-  if [ "$__db_exists" = "false" ]; then
-    return 0
-  fi
-
-# Check Reth db version
-  __db_version="$(__dodocker run --rm -v "$(__dodocker volume ls -q -f "name=$(basename "$(realpath .)" | tr '[:upper:]' '[:lower:]')[_-]reth-el-data")":"/var/lib/reth" \
-      alpine:3 cat /var/lib/reth/db/database.version)"
-  if [ "${__db_version}" -ne "1" ]; then
-    return 0
-  fi
-
-  echo "Detected Reth. For Reth beta, it will need to be re-synced from scratch."
-  echo
-  if [ "${__non_interactive:-0}" -eq 0 ]; then
-    while true; do
-      read -rp "WARNING - About to delete the Reth database. Do you wish to continue? (Y/n) " __yn
-      case $__yn in
-        [Nn]o | [Nn]  ) echo "No changes made"; return 0;;
-        * ) break;;
-      esac
-    done
-  fi
-
-  echo "Stopping Reth container"
-  __docompose stop execution && __docompose rm -f execution
-  __dodocker volume rm "$(__dodocker volume ls -q -f "name=$(basename "$(realpath .)" | tr '[:upper:]' '[:lower:]')[_-]reth-el-data")"
-  echo
-  echo "Reth stopped and database deleted."
-  echo
-}
-
-
-__delete_erigon() {
-# Check for Erigon
-  __var="COMPOSE_FILE"
-  __value=$(__get_value_from_env "${__var}" "${__env_file}")
-# I do mean to match literally
-# shellcheck disable=SC2076
-  if [[ ! "${__value}" =~ "erigon.yml" ]]; then
-    return 0
-  fi
-
-# Check Erigon version, only continue if v3
-  __var="ERIGON_DOCKER_TAG"
-  __value=$(__get_value_from_env "${__var}" "${__env_file}")
-  __var="ERIGON_DOCKER_REPO"
-  __repo=$(__get_value_from_env "${__var}" "${__env_file}")
-# I do mean to match literally
-# shellcheck disable=SC2076
-  if [[ ! ("${__value}" =~ "v3" || ( "${__value}" = "latest" && "${__repo}" =~ "thorax" ) || "${__value}" = "main-latest") ]]; then
-    return 0
-  fi
-
-  if [ -z "$(__dodocker volume ls -q -f "name=$(basename "$(realpath .)" | tr '[:upper:]' '[:lower:]')[_-]erigon-el-data")" ]; then # No Erigon volume
-    return 0
-  fi
-
-# Detect Erigon v3 by directory caplin/latest
-  __erigon_v3=$(__dodocker run --rm -v "$(__dodocker volume ls -q -f "name=$(basename "$(realpath .)" | tr '[:upper:]' '[:lower:]')[_-]erigon-el-data")":"/var/lib/erigon" \
-      alpine:3 sh -c 'if [ -d "/var/lib/erigon/caplin/latest" ]; then echo true; else echo false; fi')
-  if [ "$__erigon_v3" = "true" ]; then
-    return 0
-  fi
-
-  echo "Detected Erigon. For Erigon v3, it will need to be re-synced from scratch."
-  echo
-  while true; do
-    read -rp "WARNING - About to delete the Erigon database. Do you wish to continue? (Y/n) " __yn
-    case $__yn in
-      [Nn]o | [Nn]  ) echo "Aborting, no changes made"; exit 130;;
-      * ) break;;
-    esac
-  done
-
-  echo "Stopping Erigon container"
-  __docompose stop execution && __docompose rm -f execution
-  __dodocker volume rm "$(__dodocker volume ls -q -f "name=$(basename "$(realpath .)" | tr '[:upper:]' '[:lower:]')[_-]erigon-el-data")"
-  echo
-  echo "Erigon stopped and database deleted."
-  echo
-}
-
-
 __upgrade_postgres() {
 # Check for web3signer
   __var="COMPOSE_FILE"
@@ -990,46 +824,6 @@ __upgrade_postgres() {
 }
 
 
-__lookup_cf_zone() { # Migrates traefik-cf setup to use Zone ID
-  __compose_ymls=$(__get_value_from_env "COMPOSE_FILE" "${__env_file}.source")
-  __dns_token=$(__get_value_from_env "CF_DNS_API_TOKEN" "${__env_file}.source")
-  __zone_token=$(__get_value_from_env "CF_ZONE_API_TOKEN" "${__env_file}.source")
-  __domain=$(__get_value_from_env "DOMAIN" "${__env_file}.source")
-  if [[ ! $__compose_ymls =~ traefik-cf.yml ]]; then
-    __value=""
-    return
-  elif [[ -n $__dns_token ]]; then
-    if [[ -n $__zone_token ]]; then
-      __token=$__zone_token
-    else
-      __token=$__dns_token
-    fi
-    set +e
-    __value=$(__docompose run --rm curl-jq sh -c \
-      "curl -s \"https://api.cloudflare.com/client/v4/zones?name=${__domain}\" -H \"Authorization: Bearer ${__token}\" \
-      -H \"Content-Type: application/json\" | jq -r '.result[0].id'" | tail -n 1)
-    __code=$?
-    if [[ "$__code" -ne 0 ]]; then
-      __value=""
-      return
-    fi
-    __success=$(__docompose run --rm curl-jq sh -c \
-      "curl -s \"https://api.cloudflare.com/client/v4/zones?name=${__domain}\" -H \"Authorization: Bearer ${__token}\" \
-      -H \"Content-Type: application/json\" | jq -r '.success'" | tail -n 1)
-    set -e
-    if [ "${__success}" = "true" ]; then
-      return
-    else
-      __value=""
-      return
-    fi
-  else
-    __value=""
-    return
-  fi
-}
-
-
 __enable_v6() {
   if [ "${__docker_major_version}" -lt 27 ]; then
     return
@@ -1057,7 +851,6 @@ __enable_v6() {
     echo "Enabling IPv4/6 dual-stack for your Eth Docker setup"
     IPV6="true"
     __update_value_in_env "${__var}" "${!__var}" "${__env_file}"
-    __enabled_v6=1
   else
     echo "Docker cannot use IPv6; continuing with IPv4"
   fi
@@ -1260,35 +1053,14 @@ __env_migrate() {
   __migrated=1
   ${__as_owner} cp default.env "${__env_file}"
 
-  __var="COMPOSE_FILE"
-  __value=$(__get_value_from_env "${__var}" "${__env_file}.source")
-# Literal match intended
-# shellcheck disable=SC2076
-  if [[ "${__value}" =~ "blox-ssv2.yml" ]]; then
-    __ssv_switch
-  fi
-
   # Migrate over user settings
   for __var in "${__all_vars[@]}"; do
     __value=$(__get_value_from_env "${__var}" "${__env_file}.source")
+    # A few vars are not empty in default.env, but can legimitely be empty by user choice
     if [ -n "${__value}" ] || [ "${__var}" = "GRAFFITI" ] || [ "${__var}" = "MEV_RELAYS" ] \
-        || [ "${__var}" = "ETH_DOCKER_TAG" ] || [ "${__var}" = "RAPID_SYNC_URL" ] \
-        || [ "${__var}" = "OBOL_CHARON_CL_ENDPOINTS" ]; then
+        || [ "${__var}" = "RAPID_SYNC_URL" ]; then
       if [ "${__var}" = "COMPOSE_FILE" ]; then
         __migrate_compose_file
-      fi
-      if [[ "${__source_ver}" -lt "17" && "${__var}" = "IPV6" ]]; then  # One-time attempt; remove after Pectra
-        __enable_v6
-        if [ "${__enabled_v6}" -eq 1 ]; then
-          __value="true"
-        fi
-      fi
-      if [[ "${__source_ver}" -lt "18" && "${__var}" = "OBOL_CHARON_CL_ENDPOINTS" ]]; then
-        __obol_cl_node=$(__get_value_from_env "OBOL_CL_NODE" "${__env_file}.source")
-        if [ -n "${__obol_cl_node}" ]; then
-          __value="${__obol_cl_node}"
-          echo "Set OBOL_CHARON_CL_ENDPOINTS to ${__value}"
-        fi
       fi
       if [ "${__var}" = "CL_QUIC_PORT" ]; then
         __cl_port=$(__get_value_from_env "CL_P2P_PORT" "${__env_file}.source")
@@ -1302,26 +1074,8 @@ __env_migrate() {
           echo "Adjusted CL_QUIC_PORT to ${__value} so it does not conflict with PRYSM_UDP_PORT"
         fi
       fi
-# Literal match intended
-# shellcheck disable=SC2076
-      if [[ "${__var}" = "RAPID_SYNC_URL" && "${__value}" =~ "eth2-beacon-mainnet.infura.io" ]]; then
-        __value="https://beaconstate.info"
-      fi
-      if [[ "${__var}" = "HOST_IP" && "${__value: -1}" = ":" ]]; then
-        __value="${__value%:}" # Undo Compose V1 accommodation
-      fi
-      if [[ "${__var}" = "SHARE_IP" && "${__value: -1}" = ":" ]]; then
-        __value="${__value%:}" # Undo Compose V1 accommodation
-      fi
       # Handle & in GRAFFITI gracefully, as well as multi-line
       __update_value_in_env "${__var}" "$__value" "${__env_file}"
-    else # empty __value
-      if [ "${__var}" = "CF_ZONE_ID" ]; then
-        __lookup_cf_zone
-        if [ -n "${__value}" ]; then
-          __update_value_in_env "${__var}" "$__value" "${__env_file}"
-        fi
-      fi
     fi
   done
   if [ "${__keep_targets}" -eq 1 ]; then
@@ -1329,27 +1083,6 @@ __env_migrate() {
     for __var in "${__target_vars[@]}"; do
       __value=$(__get_value_from_env "${__var}" "${__env_file}.source")
       if [ -n "${__value}" ]; then
-        if [[ "${__var}" = "DDNS_TAG" && "${__source_ver}" -lt "8" ]]; then # Switch to ddns-updater
-          __value="v2"
-        fi
-        if [[ "${__var}" = "LH_DOCKER_TAG" && "${__value}" = "latest-modern" ]]; then # LH 5.2 ditched latest-modern
-          __value="latest"
-        fi
-        if [[ "${__var}" = "ERIGON_DOCKER_TAG" && "${__value}" = "stable" ]]; then # Erigon switched to latest
-          __value="latest"
-        fi
-        if [[ "${__var}" = "ERIGON_DOCKER_REPO" && "${__value}" = "thorax/erigon" ]]; then # Erigon new repo
-          __value="erigontech/erigon"
-        fi
-        if [[ "${__var}" = "SSV_NODE_REPO" && "${__value}" = "bloxstaking/ssv-node" ]]; then # SSV new repo
-          __value="ssvlabs/ssv-node"
-        fi
-        if [[ "${__var}" = "DEPCLI_SRC_REPO" && "${__source_ver}" -lt "21" ]]; then
-          __value="https://github.com/eth-educators/ethstaker-deposit-cli"
-        fi
-        if [[ "${__var}" = "DEPCLI_DOCKER_TAG" && "${__value}" = "nonesuch" ]]; then
-          __value="latest"
-        fi
         __update_value_in_env "${__var}" "$__value" "${__env_file}"
       fi
     done
@@ -1467,7 +1200,6 @@ __pull_and_build() {
 # shellcheck disable=SC2120
 update() {
   __during_update=1
-  __enabled_v6=0  # Remove after Pectra
 
   if [[ $(${__as_owner} git status --porcelain) ]]; then
     __dirty=1
@@ -1575,8 +1307,6 @@ update() {
   __env_migrate
   __pull_and_build
 
-  __delete_erigon
-  __delete_reth
   __upgrade_postgres
 
   echo
@@ -1601,12 +1331,7 @@ reset to defaults."
   fi
   echo
   if [ -z "${GITEXITCODE+x}" ] || [ "${GITEXITCODE}" -eq 0 ]; then
-    if [ "${__enabled_v6}" -eq 0 ]; then  # Remove after Pectra
-      echo "An \"$__me up\" command will start using the new images and configuration."
-    else
-      echo "IPv4/6 dual-stack support has been enabled."
-      echo "An \"$__me restart\" command will start using the new images and configuration."
-    fi
+    echo "An \"$__me up\" command will start using the new images and configuration."
   else
     echo "WARNING"
     echo
