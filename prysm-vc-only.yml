@@ -52,8 +52,6 @@ services:
       - /var/lib/prysm/
       - --keymanager-token-file
       - /var/lib/prysm/auth-token
-      - --beacon-rpc-provider
-      - ${CL_NODE:-consensus:4000}
       - --verbosity
       - ${LOG_LEVEL}
       - --accept-terms-of-use
@@ -66,6 +64,9 @@ services:
       - 0.0.0.0
       - --http-port
       - ${KEY_API_PORT:-7500}
+      - --enable-beacon-rest-api
+      - --beacon-rest-api-provider
+      - ${CL_NODE:-http://consensus:5052}
       - --http-cors-domain=*
       - --suggested-fee-recipient
       - ${FEE_RECIPIENT}
@@ -112,7 +113,9 @@ services:
       - validator
       - exit
       - --wallet-dir=/var/lib/prysm/
-      - --beacon-rpc-provider=${CL_NODE:-consensus:4000}
+      - --enable-beacon-rest-api
+      - --beacon-rest-api-provider
+      - ${CL_NODE:-http://consensus:5052}
       - --wallet-password-file=/var/lib/prysm/password.txt
       - --${NETWORK}
 
