@@ -61,24 +61,31 @@ if [ "${ARCHIVE_NODE}" = "true" ]; then
   echo "Nethermind archive node without pruning"
   __prune="--Sync.DownloadBodiesInFastSync=false --Sync.DownloadReceiptsInFastSync=false --Sync.FastSync=false --Sync.SnapSync=false --Sync.FastBlocks=false --Pruning.Mode=None --Sync.PivotNumber=0"
 else
-  __parallel=$(($(nproc)/4))
-  if [ "${__parallel}" -lt 2 ]; then
-    __parallel=2
-  fi
-  __prune="--Pruning.FullPruningMaxDegreeOfParallelism=${__parallel}"
-  if [ "${AUTOPRUNE_NM}" = true ]; then
-    __prune="${__prune} --Pruning.FullPruningTrigger=VolumeFreeSpace"
-    if [ "${NETWORK}" = "mainnet" ] || [ "${NETWORK}" = "gnosis" ]; then
-      __prune="${__prune} --Pruning.FullPruningThresholdMb=375810"
-    else
-      __prune="${__prune} --Pruning.FullPruningThresholdMb=51200"
+  # Fresh DB or already path based storage
+  if [[ ! -d "/var/lib/nethermind/nethermind_db/${NETWORK}" || -d "/var/lib/nethermind/nethermind_db/${NETWORK}/pathState" ]]; then
+    __prune=""
+  else # Hash, set pruning parameters
+    __parallel=$(($(nproc)/4))
+    if [ "${__parallel}" -lt 2 ]; then
+      __parallel=2
+    fi
+    __prune="--Pruning.FullPruningMaxDegreeOfParallelism=${__parallel}"
+    if [ "${AUTOPRUNE_NM}" = true ]; then
+      __prune="${__prune} --Pruning.FullPruningTrigger=VolumeFreeSpace"
+      if [ "${NETWORK}" = "mainnet" ] || [ "${NETWORK}" = "gnosis" ]; then
+        __prune="${__prune} --Pruning.FullPruningThresholdMb=375810"
+      else
+        __prune="${__prune} --Pruning.FullPruningThresholdMb=51200"
+      fi
+    fi
+    if [ "${__memtotal}" -ge 30 ]; then
+      __prune="${__prune} --Pruning.FullPruningMemoryBudgetMb=16384"
     fi
   fi
-  if [ "${__memtotal}" -ge 30 ]; then
-    __prune="${__prune} --Pruning.FullPruningMemoryBudgetMb=16384 --Init.StateDbKeyScheme=HalfPath"
+  if [ -n "${__prune}" ]; then
+    echo "Using pruning parameters:"
+    echo "${__prune}"
   fi
-  echo "Using pruning parameters:"
-  echo "${__prune}"
 fi
 
 # New or old datadir

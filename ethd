@@ -511,7 +511,8 @@ __check_disk_space() {
       echo "It should currently be auto-pruning, check logs with \"$__me logs -f --tail 500 execution | grep \
 Full\". Free space:"
     else
-      echo "If the below reads above ${__safe_prune} GiB free, prune it with \"$__me prune-nethermind\""
+      echo "You might be able to resync Nethermind for path storage if you haven't done so already, with \"$__me resync-execution\"."
+      echo "Also verify the amount of space your consensus layer client takes, and resync it as needed."
     fi
     echo
     __display_docker_dir
@@ -519,7 +520,8 @@ Full\". Free space:"
   elif [[ "${__value}" =~ "geth.yml" ]] && [[ "${__free_space}" -lt 104857600 ]]; then
     echo
     echo "You are running Geth and have less than 100 GiB of free disk space."
-    echo "You may resync from scratch to use PBSS and slow on-disk DB growth, with \"$__me resync-execution\"."
+    echo "You may resync from scratch to use PBSS and slow on-disk DB growth, if you haven't done so already, with \"$__me resync-execution\"."
+    echo "Also verify the amount of space your consensus layer client takes, and resync it as needed."
     echo
     __display_docker_dir
     __display_docker_volumes
@@ -1990,6 +1992,12 @@ prune-nethermind() {
   __var="NETWORK"
   NETWORK=$(__get_value_from_env "${__var}" "${__env_file}")
 
+  if [ -n "$(dodocker run --rm -v "$(dodocker volume ls -q -f "name=$(basename "$(realpath .)")[_-]nm-eth1-data")":"/var/lib/nethermind" \
+      alpine:3 ls "/var/lib/nethermind/nethermind_db/${NETWORK}/pathState")" ]; then
+    echo "This Nethermind uses path-based storage. Manual pruning is not required."
+    return 0
+  fi
+
   if [ "${NETWORK}" = "mainnet" ] || [ "${NETWORK}" = "gnosis" ]; then
     __min_free=262144000
     __min_gib=250
@@ -2050,6 +2058,7 @@ prune-nethermind() {
         echo "Nethermind should auto-prune below ${__threshold} GiB free. Check logs with \"$__me logs -f --tail 500 \
 execution | grep Full\" to see whether it is."
       fi
+      echo "Instead of pruning, consider resyncing Nethermind to use path-based storage, with \"$__me resync-execution\"."
       read -rp "WARNING - this will prune Nethermind's database in the background. Do you wish to continue? (No/Yes) " __yn
       case $__yn in
         [Yy][Ee][Ss] ) break;;
