@@ -20,8 +20,6 @@ RUN adduser \
     --uid "${UID}" \
     "${USER}"
 
-# Create mount point for old volume
-RUN mkdir -p /var/lib/lighthouse-og && chown -R ${USER}:${USER} /var/lib/lighthouse-og
 # Create data mount point with permissions
 RUN mkdir -p /var/lib/lighthouse/beacon/ee-secret && chown -R ${USER}:${USER} /var/lib/lighthouse/beacon && chmod -R 700 /var/lib/lighthouse/beacon && chmod 777 /var/lib/lighthouse/beacon/ee-secret
 # Cannot assume buildkit, hence no chmod

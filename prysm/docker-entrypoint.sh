@@ -6,17 +6,6 @@ if [ "$(id -u)" = '0' ]; then
   exec gosu prysmconsensus docker-entrypoint.sh "$@"
 fi
 
-# Migrate from old to new volume
-if [[ -d /var/lib/prysm-og && ! -f /var/lib/prysm-og/migrationdone \
-    && $(ls -A /var/lib/prysm-og/) ]]; then
-  echo "Migrating from old Prysm volume to new one"
-  echo "This may take 10 minutes on a fast drive, or hours if the Prysm DB is very large. Please be patient"
-  echo "If your Prysm DB is well over 200 GiB in size, please consider \"./ethd resync-consensus\""
-  rsync -a --remove-source-files --exclude='ee-secret' --info=progress2 /var/lib/prysm-og/ /var/lib/prysm/
-  touch /var/lib/prysm-og/migrationdone
-  echo "Migration completed, data is now in volume \"prysmconsensus-data\""
-fi
-
 if [ -n "${JWT_SECRET}" ]; then
   echo -n "${JWT_SECRET}" > /var/lib/prysm/ee-secret/jwtsecret
   echo "JWT secret was supplied in .env"
