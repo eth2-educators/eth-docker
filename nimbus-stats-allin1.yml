@@ -13,7 +13,5 @@ services:
       - http://consensus:8008/metrics
       - --validator.type
       - nimbus
-      - --validator.address
-      - http://validator:8009/metrics
       - --server.address
       - https://beaconcha.in/api/v1/client/metrics?apikey=${BEACON_STATS_API}&machine=${BEACON_STATS_MACHINE}
